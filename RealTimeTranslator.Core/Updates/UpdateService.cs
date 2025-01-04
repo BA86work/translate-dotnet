@@ -13,7 +13,7 @@ public class UpdateService
     private readonly HttpClient _httpClient;
     private readonly string _updateCheckUrl;
 
-    public UpdateService(ILogger<UpdateService> logger, HttpClient httpClient, string updateCheckUrl)
+    public UpdateService(HttpClient httpClient, ILogger<UpdateService> logger, string updateCheckUrl)
     {
         _logger = logger;
         _httpClient = httpClient;

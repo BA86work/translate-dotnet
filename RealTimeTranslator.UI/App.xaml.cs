@@ -76,7 +76,11 @@ namespace RealTimeTranslator.UI
 
             // Update Service
             services.AddSingleton<HttpClient>();
-            services.AddSingleton<UpdateService>();
+            services.AddSingleton<UpdateService>(sp => new UpdateService(
+                sp.GetRequiredService<HttpClient>(),
+                sp.GetRequiredService<ILogger<UpdateService>>(),
+                "https://api.example.com/updates"  // URL สำหรับตรวจสอบอัพเดท
+            ));
 
             // ViewModels
             services.AddSingleton<MainViewModel>();
@@ -108,7 +112,15 @@ namespace RealTimeTranslator.UI
 
         private void Application_Startup(object sender, StartupEventArgs e)
         {
-            OnStartup(e);
+            try
+            {
+                var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+                mainWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error during startup");
+            }
         }
 
         protected override async void OnStartup(StartupEventArgs e)
@@ -139,6 +151,8 @@ namespace RealTimeTranslator.UI
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error during startup");
+                var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+                mainWindow.Show();
             }
         }
     }
