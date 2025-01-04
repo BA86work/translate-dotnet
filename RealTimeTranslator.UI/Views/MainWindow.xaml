@@ -75,7 +75,7 @@
                 <TextBox Grid.Row="1" 
                          IsReadOnly="True"
                          TextWrapping="Wrap"
-                         Text="{Binding TranslatedText}"/>
+                         Text="{Binding TranslatedText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
             </Grid>
         </Grid>
 

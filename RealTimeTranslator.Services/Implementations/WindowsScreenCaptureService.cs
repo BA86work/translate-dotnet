@@ -1,28 +1,23 @@
 using RealTimeTranslator.Services.Interfaces;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Runtime.InteropServices;
-using Windows.Graphics.Capture;
-using Windows.Graphics;
-using Windows.Graphics.DirectX;
-using Windows.Graphics.DirectX.Direct3D11;
-using SharpDX.Direct3D11;
-using SharpDX.DXGI;
-using Device = SharpDX.Direct3D11.Device;
+using System;
 using System.Threading.Tasks;
-using WinRT;
+using System.Drawing;
+using System.Windows.Forms;
+using System.Drawing.Imaging;
+using System.IO;
 
 namespace RealTimeTranslator.Services.Implementations
 {
-    public class WindowsScreenCaptureService : IScreenCaptureService, IDisposable
+    public class WindowsScreenCaptureService : IScreenCaptureService
     {
+        private readonly IOcrService _ocrService;
         private Rectangle _captureArea;
-        private bool _isCapturing;
-        private GraphicsCaptureSession? _captureSession;
-        private Direct3D11CaptureFramePool? _framePool;
-        private Device? _device;
-        private SwapChain1? _swapChain;
-        private IDirect3DDevice? _d3dDevice;
+        private Form? _selectionForm;
+
+        public WindowsScreenCaptureService(IOcrService ocrService)
+        {
+            _ocrService = ocrService;
+        }
 
         public void SetCaptureArea(Rectangle area)
         {
@@ -31,135 +26,130 @@ namespace RealTimeTranslator.Services.Implementations
 
         public async Task<Bitmap> CaptureAreaAsync(Rectangle area)
         {
-            var bitmap = new Bitmap(area.Width, area.Height, PixelFormat.Format32bppArgb);
-            await Task.Run(() =>
+            try
             {
-                using var graphics = Graphics.FromImage(bitmap);
-                graphics.CopyFromScreen(area.Left, area.Top, 0, 0, area.Size);
-            });
-            return bitmap;
-        }
-
-        public async Task StartCaptureAsync()
-        {
-            if (_isCapturing) return;
-
-            var picker = new GraphicsCapturePicker();
-            var item = await picker.PickSingleItemAsync();
-
-            if (item != null)
-            {
-                // Create D3D11 device
-                _device = new Device(SharpDX.Direct3D.DriverType.Hardware, DeviceCreationFlags.BgraSupport);
-                
-                // Create D3D device for Windows.Graphics.Capture
-                var dxgiDevice = _device.QueryInterface<SharpDX.DXGI.Device>();
-                var d3dDevice = CreateD3DDeviceFromSharpDX(dxgiDevice);
-                _d3dDevice = d3dDevice;
-
-                // Create swap chain
-                var swapChainDesc = new SwapChainDescription1
+                var bitmap = new Bitmap(area.Width, area.Height);
+                using (var graphics = Graphics.FromImage(bitmap))
                 {
-                    Width = item.Size.Width,
-                    Height = item.Size.Height,
-                    Format = Format.B8G8R8A8_UNorm,
-                    Stereo = false,
-                    SampleDescription = new SampleDescription(1, 0),
-                    Usage = Usage.RenderTargetOutput,
-                    BufferCount = 2,
-                    Scaling = Scaling.Stretch,
-                    SwapEffect = SwapEffect.FlipSequential,
-                    AlphaMode = AlphaMode.Premultiplied,
-                    Flags = SwapChainFlags.None
-                };
-
-                using (var factory = new Factory2())
-                {
-                    _swapChain = new SwapChain1(factory, _device, ref swapChainDesc);
+                    graphics.CopyFromScreen(area.X, area.Y, 0, 0, area.Size);
                 }
-
-                // Create frame pool
-                _framePool = Direct3D11CaptureFramePool.Create(
-                    _d3dDevice,
-                    DirectXPixelFormat.B8G8R8A8UIntNormalized,
-                    2,
-                    item.Size);
-
-                _captureSession = _framePool.CreateCaptureSession(item);
-                _framePool.FrameArrived += FramePool_FrameArrived;
-                _captureSession.StartCapture();
-                _isCapturing = true;
+                return bitmap;
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to capture screen area: {ex.Message}", ex);
             }
         }
 
-        private IDirect3DDevice CreateD3DDeviceFromSharpDX(SharpDX.DXGI.Device dxgiDevice)
+        public async Task<string> CaptureAndRecognizeTextAsync()
         {
-            var access = Marshal.GetIUnknownForObject(dxgiDevice);
-            var d3dDevice = MarshalInterface<IDirect3DDevice>.FromAbi(access);
-            Marshal.Release(access);
-            return d3dDevice;
+            try
+            {
+                var tcs = new TaskCompletionSource<Rectangle>();
+                
+                await Task.Run(() =>
+                {
+                    _selectionForm = new Form
+                    {
+                        WindowState = FormWindowState.Maximized,
+                        FormBorderStyle = FormBorderStyle.None,
+                        Opacity = 0.5,
+                        BackColor = Color.Black,
+                        Cursor = Cursors.Cross,
+                        TopMost = true
+                    };
+
+                    Point startPoint = Point.Empty;
+                    bool isMouseDown = false;
+                    Rectangle selectedArea = Rectangle.Empty;
+
+                    _selectionForm.MouseDown += (s, e) =>
+                    {
+                        if (e.Button == MouseButtons.Left)
+                        {
+                            startPoint = e.Location;
+                            isMouseDown = true;
+                            selectedArea = Rectangle.Empty;
+                        }
+                    };
+
+                    _selectionForm.MouseMove += (s, e) =>
+                    {
+                        if (isMouseDown)
+                        {
+                            int x = Math.Min(startPoint.X, e.X);
+                            int y = Math.Min(startPoint.Y, e.Y);
+                            int width = Math.Abs(e.X - startPoint.X);
+                            int height = Math.Abs(e.Y - startPoint.Y);
+                            selectedArea = new Rectangle(x, y, width, height);
+                            _selectionForm.Invalidate();
+                        }
+                    };
+
+                    _selectionForm.MouseUp += (s, e) =>
+                    {
+                        if (e.Button == MouseButtons.Left)
+                        {
+                            isMouseDown = false;
+                            _selectionForm.Hide();
+                            tcs.SetResult(selectedArea);
+                        }
+                    };
+
+                    _selectionForm.Paint += (s, e) =>
+                    {
+                        if (selectedArea != Rectangle.Empty)
+                        {
+                            using (Pen pen = new Pen(Color.Red, 2))
+                            {
+                                e.Graphics.DrawRectangle(pen, selectedArea);
+                            }
+                        }
+                    };
+
+                    _selectionForm.KeyDown += (s, e) =>
+                    {
+                        if (e.KeyCode == Keys.Escape)
+                        {
+                            _selectionForm.Hide();
+                            tcs.SetResult(Rectangle.Empty);
+                        }
+                    };
+
+                    _selectionForm.ShowDialog();
+                });
+
+                var area = await tcs.Task;
+                if (area == Rectangle.Empty)
+                {
+                    return string.Empty;
+                }
+
+                using var bitmap = await CaptureAreaAsync(area);
+                return await _ocrService.RecognizeTextAsync(bitmap);
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Failed to capture and recognize text: {ex.Message}", ex);
+            }
+            finally
+            {
+                if (_selectionForm != null)
+                {
+                    _selectionForm.Dispose();
+                    _selectionForm = null;
+                }
+            }
+        }
+
+        public Task StartCaptureAsync()
+        {
+            return Task.CompletedTask;
         }
 
         public Task StopCaptureAsync()
         {
-            if (!_isCapturing) return Task.CompletedTask;
-
-            _captureSession?.Dispose();
-            _framePool?.Dispose();
-            _swapChain?.Dispose();
-            _device?.Dispose();
-            _d3dDevice = null;
-            _isCapturing = false;
-
             return Task.CompletedTask;
-        }
-
-        private void FramePool_FrameArrived(Direct3D11CaptureFramePool sender, object args)
-        {
-            using var frame = sender.TryGetNextFrame();
-            if (frame != null)
-            {
-                var frameTexture = Direct3D11Helper.CreateSharpDXTexture2D(frame.Surface);
-                if (frameTexture != null)
-                {
-                    // Copy frame to swap chain back buffer
-                    using var backBuffer = _swapChain?.GetBackBuffer<Texture2D>(0);
-                    if (backBuffer != null)
-                    {
-                        _device?.ImmediateContext.CopyResource(frameTexture, backBuffer);
-                        _swapChain?.Present(1, PresentFlags.None);
-                    }
-                    frameTexture.Dispose();
-                }
-            }
-        }
-
-        public void Dispose()
-        {
-            StopCaptureAsync().Wait();
-            _captureSession?.Dispose();
-            _framePool?.Dispose();
-            _swapChain?.Dispose();
-            _device?.Dispose();
-            GC.SuppressFinalize(this);
-        }
-    }
-
-    internal static class Direct3D11Helper
-    {
-        public static Texture2D? CreateSharpDXTexture2D(IDirect3DSurface surface)
-        {
-            try
-            {
-                var access = Marshal.GetIUnknownForObject(surface);
-                var d3dTexture = new Texture2D(access);
-                Marshal.Release(access);
-                return d3dTexture;
-            }
-            catch
-            {
-                return null;
-            }
         }
     }
 } 

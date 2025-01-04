@@ -6,6 +6,8 @@ using RealTimeTranslator.Services.Implementations;
 using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using RealTimeTranslator.Data;
+using Microsoft.Extensions.Options;
+using RealTimeTranslator.Core.Configuration;
 
 namespace RealTimeTranslator.Tests.Services
 {
@@ -14,7 +16,6 @@ namespace RealTimeTranslator.Tests.Services
         private Mock<ITranslationService> _translationServiceMock;
         private Mock<ICommunityTranslationService> _communityServiceMock;
         private Mock<ITranslationCacheService> _cacheServiceMock;
-        private ILogger<AzureTranslationService> _logger;
         private TranslatorDbContext _dbContext;
 
         public TranslationServiceTests()
@@ -22,7 +23,6 @@ namespace RealTimeTranslator.Tests.Services
             _translationServiceMock = new Mock<ITranslationService>();
             _communityServiceMock = new Mock<ICommunityTranslationService>();
             _cacheServiceMock = new Mock<ITranslationCacheService>();
-            _logger = new Mock<ILogger<AzureTranslationService>>().Object;
 
             var options = new DbContextOptionsBuilder<TranslatorDbContext>()
                 .UseInMemoryDatabase(databaseName: "TestDb")
@@ -59,7 +59,12 @@ namespace RealTimeTranslator.Tests.Services
                 throw new Exception("Azure Translator API Key and Region are required for this test");
             }
 
-            var service = new AzureTranslationService(apiKey, region);
+            var config = Options.Create(new AzureTranslatorConfig 
+            { 
+                Key = apiKey,
+                Region = region
+            });
+            var service = new AzureTranslationService(config);
             const string sourceText = "Hello";
 
             // Act

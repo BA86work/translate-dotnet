@@ -17,6 +17,8 @@ using Microsoft.EntityFrameworkCore;
 using System.Net.Http;
 using Serilog;
 using RealTimeTranslator.Core.Configuration;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace RealTimeTranslator.UI
 {
@@ -29,19 +31,41 @@ namespace RealTimeTranslator.UI
 
         public App()
         {
-            // Configuration
-            var builder = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+            try
+            {
+                File.AppendAllText("startup.log", $"{DateTime.Now}: Starting application configuration...\n");
+                
+                // Get the executable's directory
+                var exePath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                var exeDir = Path.GetDirectoryName(exePath) ?? AppDomain.CurrentDomain.BaseDirectory;
+                File.AppendAllText("startup.log", $"{DateTime.Now}: Executable directory: {exeDir}\n");
 
-            _configuration = builder.Build();
+                // Configuration
+                var builder = new ConfigurationBuilder()
+                    .SetBasePath(exeDir)
+                    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
 
-            var services = new ServiceCollection();
-            ConfigureServices(services);
-            _serviceProvider = services.BuildServiceProvider();
+                File.AppendAllText("startup.log", $"{DateTime.Now}: Loading configuration...\n");
+                _configuration = builder.Build();
 
-            _logger = _serviceProvider.GetRequiredService<ILogger<App>>();
-            _updateService = _serviceProvider.GetRequiredService<UpdateService>();
+                var services = new ServiceCollection();
+                File.AppendAllText("startup.log", $"{DateTime.Now}: Configuring services...\n");
+                ConfigureServices(services);
+                
+                File.AppendAllText("startup.log", $"{DateTime.Now}: Building service provider...\n");
+                _serviceProvider = services.BuildServiceProvider();
+
+                File.AppendAllText("startup.log", $"{DateTime.Now}: Getting logger and update service...\n");
+                _logger = _serviceProvider.GetRequiredService<ILogger<App>>();
+                _updateService = _serviceProvider.GetRequiredService<UpdateService>();
+                
+                File.AppendAllText("startup.log", $"{DateTime.Now}: Application configuration completed\n");
+            }
+            catch (Exception ex)
+            {
+                File.AppendAllText("startup.log", $"{DateTime.Now}: CRITICAL ERROR in constructor: {ex.Message}\n{ex.StackTrace}\n");
+                throw;
+            }
         }
 
         private void ConfigureServices(IServiceCollection services)
@@ -79,7 +103,7 @@ namespace RealTimeTranslator.UI
             services.AddSingleton<UpdateService>(sp => new UpdateService(
                 sp.GetRequiredService<HttpClient>(),
                 sp.GetRequiredService<ILogger<UpdateService>>(),
-                "https://api.example.com/updates"  // URL สำหรับตรวจสอบอัพเดท
+                _configuration.GetValue<string>("UpdateService:Url") ?? "https://api.example.com/updates"
             ));
 
             // ViewModels
@@ -110,49 +134,91 @@ namespace RealTimeTranslator.UI
             services.AddSingleton<SettingsService>();
         }
 
-        private void Application_Startup(object sender, StartupEventArgs e)
-        {
-            try
-            {
-                var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
-                mainWindow.Show();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error during startup");
-            }
-        }
-
         protected override async void OnStartup(StartupEventArgs e)
         {
-            base.OnStartup(e);
-
             try
             {
-                var updateInfo = await _updateService.CheckForUpdatesAsync();
-                if (updateInfo != null)
+                _logger.LogInformation("Application starting...");
+                base.OnStartup(e);
+
+                try
                 {
-                    var result = MessageBox.Show(
-                        $"New version {updateInfo.Version} is available. Would you like to update?",
-                        "Update Available",
-                        MessageBoxButton.YesNo,
-                        MessageBoxImage.Information);
-
-                    if (result == MessageBoxResult.Yes)
+                    // Only check for updates if enabled in config
+                    if (_configuration.GetValue<bool>("UpdateService:Enabled"))
                     {
-                        await _updateService.DownloadAndInstallUpdateAsync(updateInfo);
-                        return;
-                    }
-                }
+                        _logger.LogInformation("Update checking is enabled, checking for updates...");
+                        try 
+                        {
+                            // Add timeout for update check
+                            using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                            var updateInfo = await _updateService.CheckForUpdatesAsync()
+                                .WaitAsync(TimeSpan.FromSeconds(5), cts.Token);
+                            
+                            if (updateInfo != null)
+                            {
+                                _logger.LogInformation("Update available: {Version}", updateInfo.Version);
+                                var result = MessageBox.Show(
+                                    $"New version {updateInfo.Version} is available. Would you like to update?",
+                                    "Update Available",
+                                    MessageBoxButton.YesNo,
+                                    MessageBoxImage.Information);
 
-                var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
-                mainWindow.Show();
+                                if (result == MessageBoxResult.Yes)
+                                {
+                                    _logger.LogInformation("Starting update process...");
+                                    await _updateService.DownloadAndInstallUpdateAsync(updateInfo)
+                                        .WaitAsync(TimeSpan.FromSeconds(30), CancellationToken.None);
+                                    Shutdown();
+                                    return;
+                                }
+                            }
+                        }
+                        catch (TimeoutException tex)
+                        {
+                            _logger.LogWarning(tex, "Update check timed out, continuing startup");
+                        }
+                        catch (Exception updateEx)
+                        {
+                            _logger.LogWarning(updateEx, "Failed to check for updates, continuing startup");
+                        }
+                    }
+                    else
+                    {
+                        _logger.LogInformation("Update checking is disabled, skipping...");
+                    }
+
+                    _logger.LogInformation("Creating main window...");
+                    // Show main window
+                    var mainViewModel = _serviceProvider.GetRequiredService<MainViewModel>();
+                    var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
+                    mainWindow.DataContext = mainViewModel;
+                    _logger.LogInformation("Showing main window...");
+                    mainWindow.Show();
+                    Current.MainWindow = mainWindow; // Set the main window explicitly
+                    _logger.LogInformation("Main window shown successfully");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error during startup");
+                    var errorMessage = $"An error occurred during startup: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}";
+                    _logger.LogError("Error details: {ErrorMessage}", errorMessage);
+                    MessageBox.Show(errorMessage, 
+                        "Startup Error", 
+                        MessageBoxButton.OK, 
+                        MessageBoxImage.Error);
+                    Shutdown();
+                }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error during startup");
-                var mainWindow = _serviceProvider.GetRequiredService<MainWindow>();
-                mainWindow.Show();
+                var criticalError = $"Critical error during startup: {ex.Message}\n\nStack Trace:\n{ex.StackTrace}";
+                // Can't use logger here as it might be the source of the error
+                File.WriteAllText("critical_error.log", criticalError);
+                MessageBox.Show(criticalError,
+                    "Critical Error", 
+                    MessageBoxButton.OK, 
+                    MessageBoxImage.Error);
+                Shutdown();
             }
         }
     }

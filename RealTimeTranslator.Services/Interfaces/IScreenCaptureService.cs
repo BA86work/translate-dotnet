@@ -9,5 +9,6 @@ namespace RealTimeTranslator.Services.Interfaces
         void SetCaptureArea(Rectangle area);
         Task StartCaptureAsync();
         Task StopCaptureAsync();
+        Task<string> CaptureAndRecognizeTextAsync();
     }
 } 

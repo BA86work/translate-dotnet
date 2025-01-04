@@ -53,7 +53,7 @@ namespace RealTimeTranslator.UI.ViewModels
         public string TranslatedText
         {
             get => _translatedText;
-            private set
+            set
             {
                 if (_translatedText != value)
                 {

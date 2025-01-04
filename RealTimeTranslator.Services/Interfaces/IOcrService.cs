@@ -7,5 +7,6 @@ namespace RealTimeTranslator.Services.Interfaces
     {
         Task<string> ExtractTextFromImageAsync(Bitmap image);
         Task InitializeAsync(string tessdataPath);
+        Task<string> RecognizeTextAsync(Bitmap image);
     }
 } 
