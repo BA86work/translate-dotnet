@@ -47,6 +47,30 @@ namespace RealTimeTranslator.Tests.Services
             Assert.Equal(cachedTranslation, result);
         }
 
+        [Fact(Skip = "Requires Azure Translator API Key")]
+        public async Task AzureTranslator_TranslatesTextCorrectly()
+        {
+            // Arrange
+            var apiKey = Environment.GetEnvironmentVariable("AZURE_TRANSLATOR_KEY");
+            var region = Environment.GetEnvironmentVariable("AZURE_TRANSLATOR_REGION");
+            
+            if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(region))
+            {
+                throw new Exception("Azure Translator API Key and Region are required for this test");
+            }
+
+            var service = new AzureTranslationService(apiKey, region);
+            const string sourceText = "Hello";
+
+            // Act
+            var result = await service.TranslateTextAsync(sourceText, "en", "ja");
+
+            // Assert
+            Assert.NotNull(result);
+            Assert.NotEmpty(result);
+            Assert.NotEqual(sourceText, result);
+        }
+
         public void Dispose()
         {
             _dbContext.Database.EnsureDeleted();

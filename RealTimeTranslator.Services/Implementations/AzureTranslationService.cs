@@ -1,7 +1,11 @@
-using Azure;
-using Azure.AI.Translation.Text;
+using Microsoft.Extensions.Options;
+using RealTimeTranslator.Core.Configuration;
 using RealTimeTranslator.Services.Interfaces;
+using Azure.AI.Translation.Text;
+using Azure;
 using System.Threading.Tasks;
+using System.Linq;
+using System;
 
 namespace RealTimeTranslator.Services.Implementations
 {
@@ -9,23 +13,32 @@ namespace RealTimeTranslator.Services.Implementations
     {
         private readonly TextTranslationClient _client;
 
-        public AzureTranslationService(string key, string region)
+        public AzureTranslationService(IOptions<AzureTranslatorConfig> config)
         {
-            var credential = new AzureKeyCredential(key);
-            _client = new TextTranslationClient(credential, region);
+            var credentials = new AzureKeyCredential(config.Value.Key);
+            _client = new TextTranslationClient(credentials, config.Value.Region);
         }
 
         public async Task<string> TranslateTextAsync(string text, string fromLanguage, string toLanguage)
         {
-            var response = await _client.TranslateAsync(toLanguage, text, fromLanguage);
-            return response.Value[0].Translations[0].Text;
+            try 
+            {
+                var response = await _client.TranslateAsync(toLanguage, text, fromLanguage);
+                var translation = response.Value.FirstOrDefault();
+                return translation?.Translations.FirstOrDefault()?.Text ?? string.Empty;
+            }
+            catch (Exception ex)
+            {
+                // Log the error or handle it appropriately
+                return $"Translation Error: {ex.Message}";
+            }
         }
 
         public async Task<bool> ValidateApiKeyAsync()
         {
             try
             {
-                await _client.GetLanguagesAsync();
+                var response = await _client.TranslateAsync("ja", "test");
                 return true;
             }
             catch

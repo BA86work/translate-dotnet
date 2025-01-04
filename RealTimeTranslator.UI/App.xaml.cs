@@ -16,6 +16,7 @@ using RealTimeTranslator.Core.Backup;
 using Microsoft.EntityFrameworkCore;
 using System.Net.Http;
 using Serilog;
+using RealTimeTranslator.Core.Configuration;
 
 namespace RealTimeTranslator.UI
 {
@@ -24,9 +25,17 @@ namespace RealTimeTranslator.UI
         private readonly ILogger<App> _logger;
         private readonly IServiceProvider _serviceProvider;
         private readonly UpdateService _updateService;
+        private readonly IConfiguration _configuration;
 
         public App()
         {
+            // Configuration
+            var builder = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+
+            _configuration = builder.Build();
+
             var services = new ServiceCollection();
             ConfigureServices(services);
             _serviceProvider = services.BuildServiceProvider();
@@ -53,22 +62,15 @@ namespace RealTimeTranslator.UI
                 builder.AddSerilog(Log.Logger);
             });
             
-            // Configuration
-            var configuration = new ConfigurationBuilder()
-                .SetBasePath(Directory.GetCurrentDirectory())
-                .AddJsonFile("appsettings.json", optional: false)
-                .Build();
-
-            services.AddSingleton<IConfiguration>(configuration);
+            services.AddSingleton<IConfiguration>(_configuration);
 
             // Database
             services.AddDbContext<TranslatorDbContext>(options =>
-                options.UseSqlite(configuration.GetConnectionString("Database")));
+                options.UseSqlite(_configuration.GetConnectionString("Database")));
 
             // Services
-            services.AddSingleton<ITranslationService>(sp => new AzureTranslationService(
-                configuration["AzureTranslator:SubscriptionKey"] ?? throw new InvalidOperationException("AzureTranslator:SubscriptionKey is not configured"),
-                configuration["AzureTranslator:Region"] ?? throw new InvalidOperationException("AzureTranslator:Region is not configured")));
+            services.Configure<AzureTranslatorConfig>(_configuration.GetSection("AzureTranslator"));
+            services.AddSingleton<ITranslationService, AzureTranslationService>();
             services.AddSingleton<IOcrService, TesseractOcrService>();
             services.AddSingleton<IScreenCaptureService, WindowsScreenCaptureService>();
 
