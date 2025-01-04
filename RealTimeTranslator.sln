@@ -1,0 +1,46 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealTimeTranslator.UI", "RealTimeTranslator.UI\RealTimeTranslator.UI.csproj", "{F3DB8713-C4E0-4C20-BB8B-DFDA6084B7CE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealTimeTranslator.Core", "RealTimeTranslator.Core\RealTimeTranslator.Core.csproj", "{CF82AC0F-1D74-4B76-9731-39D170BD1F07}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealTimeTranslator.Data", "RealTimeTranslator.Data\RealTimeTranslator.Data.csproj", "{21F2BFE9-8C01-4402-A253-94BA5F47AE18}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealTimeTranslator.Services", "RealTimeTranslator.Services\RealTimeTranslator.Services.csproj", "{B44A2F99-2C81-438A-94B3-D4A7B5EDDB7E}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealTimeTranslator.Tests", "RealTimeTranslator.Tests\RealTimeTranslator.Tests.csproj", "{FA4ECC6A-CC17-4AA9-ADA8-3724A5445A88}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{F3DB8713-C4E0-4C20-BB8B-DFDA6084B7CE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F3DB8713-C4E0-4C20-BB8B-DFDA6084B7CE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F3DB8713-C4E0-4C20-BB8B-DFDA6084B7CE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F3DB8713-C4E0-4C20-BB8B-DFDA6084B7CE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CF82AC0F-1D74-4B76-9731-39D170BD1F07}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CF82AC0F-1D74-4B76-9731-39D170BD1F07}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CF82AC0F-1D74-4B76-9731-39D170BD1F07}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CF82AC0F-1D74-4B76-9731-39D170BD1F07}.Release|Any CPU.Build.0 = Release|Any CPU
+		{21F2BFE9-8C01-4402-A253-94BA5F47AE18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{21F2BFE9-8C01-4402-A253-94BA5F47AE18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{21F2BFE9-8C01-4402-A253-94BA5F47AE18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{21F2BFE9-8C01-4402-A253-94BA5F47AE18}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B44A2F99-2C81-438A-94B3-D4A7B5EDDB7E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B44A2F99-2C81-438A-94B3-D4A7B5EDDB7E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B44A2F99-2C81-438A-94B3-D4A7B5EDDB7E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B44A2F99-2C81-438A-94B3-D4A7B5EDDB7E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FA4ECC6A-CC17-4AA9-ADA8-3724A5445A88}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FA4ECC6A-CC17-4AA9-ADA8-3724A5445A88}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FA4ECC6A-CC17-4AA9-ADA8-3724A5445A88}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FA4ECC6A-CC17-4AA9-ADA8-3724A5445A88}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

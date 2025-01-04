@@ -1,0 +1,29 @@
+<Window x:Class="RealTimeTranslator.UI.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Real-Time Translator" Height="450" Width="800">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+        
+        <Menu Grid.Row="0">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Settings"/>
+                <Separator/>
+                <MenuItem Header="_Exit"/>
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_About"/>
+            </MenuItem>
+        </Menu>
+
+        <Grid Grid.Row="1" Margin="10">
+            <TextBlock Text="Welcome to Real-Time Translator"
+                     HorizontalAlignment="Center"
+                     VerticalAlignment="Center"
+                     FontSize="24"/>
+        </Grid>
+    </Grid>
+</Window> 
