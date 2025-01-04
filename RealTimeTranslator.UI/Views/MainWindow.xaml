@@ -1,14 +1,18 @@
 <Window x:Class="RealTimeTranslator.UI.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Real-Time Translator" Height="450" Width="800">
-    <Grid>
+        xmlns:viewmodels="clr-namespace:RealTimeTranslator.UI.ViewModels"
+        Title="Real-Time Translator" Height="600" Width="1000"
+        WindowStartupLocation="CenterScreen">
+    <Grid Margin="10">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-        
-        <Menu Grid.Row="0">
+
+        <!-- Top Menu -->
+        <Menu Grid.Row="0" Margin="0,0,0,10">
             <MenuItem Header="_File">
                 <MenuItem Header="_Settings"/>
                 <Separator/>
@@ -19,11 +23,67 @@
             </MenuItem>
         </Menu>
 
-        <Grid Grid.Row="1" Margin="10">
-            <TextBlock Text="Welcome to Real-Time Translator"
-                     HorizontalAlignment="Center"
-                     VerticalAlignment="Center"
-                     FontSize="24"/>
+        <!-- Main Content -->
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Source Text -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <ComboBox Grid.Row="0" 
+                          Margin="0,0,0,5"
+                          ItemsSource="{Binding SourceLanguages}"
+                          SelectedItem="{Binding SelectedSourceLanguage}"/>
+                
+                <TextBox Grid.Row="1" 
+                         AcceptsReturn="True"
+                         TextWrapping="Wrap"
+                         Text="{Binding SourceText, UpdateSourceTrigger=PropertyChanged}"/>
+            </Grid>
+
+            <!-- Controls -->
+            <StackPanel Grid.Column="1" 
+                        Margin="10,0" 
+                        VerticalAlignment="Center">
+                <Button Content="⇄" 
+                        Margin="0,0,0,10"
+                        Command="{Binding SwapLanguagesCommand}"/>
+                <Button Content="📷" 
+                        Command="{Binding CaptureScreenCommand}"/>
+            </StackPanel>
+
+            <!-- Target Text -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+                
+                <ComboBox Grid.Row="0" 
+                          Margin="0,0,0,5"
+                          ItemsSource="{Binding TargetLanguages}"
+                          SelectedItem="{Binding SelectedTargetLanguage}"/>
+                
+                <TextBox Grid.Row="1" 
+                         IsReadOnly="True"
+                         TextWrapping="Wrap"
+                         Text="{Binding TranslatedText}"/>
+            </Grid>
         </Grid>
+
+        <!-- Status Bar -->
+        <StatusBar Grid.Row="2" Margin="0,10,0,0">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusMessage}"/>
+            </StatusBarItem>
+        </StatusBar>
     </Grid>
 </Window> 
